@@ -21,6 +21,8 @@ public class VistaMenuFragment extends Fragment {
 
 
         btnValorHora.setOnClickListener(v -> {
+
+
             ((MainActivity) getActivity()).showFragmentWithBackStack(
                     VistaValorHoraFragment.newInstance());
         });

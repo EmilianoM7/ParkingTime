@@ -2,7 +2,6 @@ package com.example.parkingtime;
 
 import android.app.AlertDialog;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.icu.util.Calendar;
 import android.os.Bundle;
 import android.text.InputType;
@@ -12,13 +11,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.TimePicker;
 
 import androidx.fragment.app.Fragment;
 
@@ -34,10 +31,19 @@ public class VistaValorHoraFragment extends Fragment {
     int amarillo = Color.parseColor("#ffd428");
     int grisLetra = Color.parseColor("#666666");
 
-    int verticalBloque = 0;
+    int verticalBloque = 8;
     int horizontalBloque = 32;
 
-    int tarifaActual;
+    // ENV
+    private static int tarifaActual;
+    private static int toleranciaActual;
+    private static int fraccionActual;
+    private static int horaIngreso;
+    private static int minutoIngreso;
+    private static int horaSalida;
+    private static int minutoSalida;
+    private static TextView txt_tiempo;
+    private static TextView txt_montoTotal;
 
     public static VistaValorHoraFragment newInstance() {
         VistaValorHoraFragment fragment = new VistaValorHoraFragment();
@@ -59,12 +65,12 @@ public class VistaValorHoraFragment extends Fragment {
 
         generarFormulario(containerFormulario);
 
-        updateFormulario();
-
         return view;
     }
 
     private void generarFormulario(LinearLayout container) {
+        getDatosIniciales();
+
         // config
         agregarTexto(container, "Fraccion: 1/" + MainBack.fraccionDefault + " hs.", false);
         agregarTexto(container, "Tolerancia: " + MainBack.toleranciaDefault + " min.", false);
@@ -75,22 +81,46 @@ public class VistaValorHoraFragment extends Fragment {
         agregarSeparador(container);
 
         // tarifa
-        tarifaActual = MainBack.tarifaDefault;
         agregarEditorNumero(container,"Tarifa Hora");
         agregarSeparador(container);
 
         // calculo
-        agregarTexto(container, "Tiempo Total: " + MainBack.tiempoTranscurrido(null,null), false);
-        agregarTexto(container, "Costo Total: " + MainBack.calcularPrecioTotal(7,2,tarifaActual), false);
+        txt_tiempo = agregarTexto(container, "tiempo?", true);
+        txt_montoTotal = agregarTexto(container, "monto?", true);
+        updateFormulario();
     }
 
     private void updateFormulario(){
+        // tiempo
+        int mins = MainBack.calcularMinutosTotales(horaIngreso,minutoIngreso,horaSalida,minutoSalida);
+        txt_tiempo.setText("Tiempo Total: " + MainBack.minutoAHora(mins));
+        // vaor
+        Logger.logMain("OK - " + mins);
+        Logger.logMain("OK - " + fraccionActual);
+        Logger.logMain("OK - " + tarifaActual);
 
+        String precioTotal = MainBack.calcularPrecioTotal(mins,fraccionActual,tarifaActual, toleranciaActual);
+        txt_montoTotal.setText("Costo Total: " + precioTotal);
+        // OK
+        Logger.logMain("OK");
+    }
+
+    private void getDatosIniciales(){
+        //TODO esto debe poder configurarse
+        fraccionActual = MainBack.fraccionDefault;
+        toleranciaActual = MainBack.toleranciaDefault;
+
+        tarifaActual = MainBack.tarifaDefault;
+
+        horaSalida = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        minutoSalida = Calendar.getInstance().get(Calendar.MINUTE);
+        horaIngreso = horaSalida - 1;
+        minutoIngreso = minutoSalida;
     }
 
     private void agregarSeparador(LinearLayout container){
 
-        int vertical = 32;
+        int vertical = 45;
         int horizontal = 0;
         //linear
         // Línea que no llega a los bordes
@@ -115,16 +145,12 @@ public class VistaValorHoraFragment extends Fragment {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         ));
-
-
-
         liearHora.setOrientation(LinearLayout.HORIZONTAL);
         liearHora.setGravity(Gravity.CENTER_VERTICAL);
         liearHora.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
         liearHora.setBackgroundColor(grisMedio);
         liearHora.setClickable(true);
         liearHora.setFocusable(true);
-
 
         // TextView clave
         TextView tvHoraActual = new TextView(requireContext());
@@ -134,38 +160,32 @@ public class VistaValorHoraFragment extends Fragment {
                 1
         );
         tvHoraActual.setLayoutParams(claveParams);
-        tvHoraActual.setTextSize(14);
+        tvHoraActual.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        tvHoraActual.setTextSize(24);
         // setFechaActual
-        String horaActual = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-                + ":" + Calendar.getInstance().get(Calendar.MINUTE);
+        String horaActual;
+        if (actual){
+            horaActual = horaSalida + ":" + minutoSalida;
+        }
+        else {
+            horaActual = horaIngreso + ":" + minutoIngreso;
+        }
         tvHoraActual.setText(horaActual);
-
-        // TextView valor
-        TextView tvValor = new TextView(requireContext());
-        tvValor.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
-        tvValor.setTextSize(14);
-        tvValor.setTypeface(null, Typeface.BOLD);
-        tvValor.setTextColor(Color.parseColor("#000000"));
-        tvValor.setText("ocho");
 
         // añadir al linear
         liearHora.addView(tvHoraActual);
-        liearHora.addView(tvValor);
 
         // listener
-        liearHora.setOnClickListener(v -> mostrarDialogHoraScrolleable());
+        liearHora.setOnClickListener(v -> mostrarDialogHoraScrolleable(nombre, actual, tvHoraActual));
 
         //añadir al container
         container.addView(liearHora);
 
     }
 
-    private void mostrarDialogHoraScrolleable() {
+    private void mostrarDialogHoraScrolleable(String nombre, boolean actual, TextView tvHora) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Selecciona la hora");
+        builder.setTitle(nombre);
 
         // Layout para los NumberPickers
         LinearLayout layout = new LinearLayout(getContext());
@@ -177,7 +197,6 @@ public class VistaValorHoraFragment extends Fragment {
         final NumberPicker pickerHora = new NumberPicker(getContext());
         pickerHora.setMinValue(0);
         pickerHora.setMaxValue(23);
-        pickerHora.setValue(Calendar.getInstance().get(Calendar.HOUR_OF_DAY));
         pickerHora.setFormatter(i -> String.format("%02d", i));
 
         // Separador
@@ -190,7 +209,14 @@ public class VistaValorHoraFragment extends Fragment {
         final NumberPicker pickerMinuto = new NumberPicker(getContext());
         pickerMinuto.setMinValue(0);
         pickerMinuto.setMaxValue(59);
-        pickerMinuto.setValue(Calendar.getInstance().get(Calendar.MINUTE));
+        if (actual){
+            pickerHora.setValue(horaSalida);
+            pickerMinuto.setValue(minutoSalida);
+        }
+        else {
+            pickerHora.setValue(horaIngreso);
+            pickerMinuto.setValue(minutoIngreso);
+        }
         pickerMinuto.setFormatter(i -> String.format("%02d", i));
 
         layout.addView(pickerHora);
@@ -201,8 +227,19 @@ public class VistaValorHoraFragment extends Fragment {
         builder.setPositiveButton("Aceptar", (dialog, which) -> {
             int hora = pickerHora.getValue();
             int minuto = pickerMinuto.getValue();
-            String tiempo = String.format("%02d:%02d", hora, minuto);
             // Usar la hora seleccionada
+            if (actual){
+                horaSalida = hora;
+                minutoSalida = minuto;
+                Logger.logMain("salida: " + horaSalida  + ":" + minutoSalida);
+            }
+            else {
+                horaIngreso = hora;
+                minutoIngreso = minuto;
+                Logger.logMain("ingreso: " + horaIngreso  + ":" + minutoIngreso);
+            }
+            tvHora.setText(hora + ":" + minuto);
+            updateFormulario();
         });
         builder.setNegativeButton("Cancelar", null);
 
@@ -244,7 +281,7 @@ public class VistaValorHoraFragment extends Fragment {
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
         editTextNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
-        editTextNumber.setText("" + MainBack.tarifaDefault);
+        editTextNumber.setText("" + tarifaActual);
 
         // agregar editor
         container.addView(editTextNumber);
@@ -290,8 +327,9 @@ public class VistaValorHoraFragment extends Fragment {
             // setear valores
             btnIncrementador.setOnClickListener(v -> {
                 tarifaActual =  MainBack.incrementar(tarifaActual, tarifaBoton);
-                Logger.logMain("" + tarifaActual);
+                Logger.logMain("Tarifa: " + tarifaActual);
                 numerico.setText("" + tarifaActual);
+                updateFormulario();
             });
             btnIncrementador.setBackgroundColor(colorBoton);
             btnIncrementador.setText(signo + tarifaBoton);
@@ -304,7 +342,7 @@ public class VistaValorHoraFragment extends Fragment {
 
     }
 
-    private void agregarTexto(LinearLayout container, String texto, boolean bold) {
+    private TextView agregarTexto(LinearLayout container, String texto, boolean bold) {
         TextView txt = new TextView(getContext());
         txt.setText(texto);
         txt.setTextSize(16);
@@ -320,6 +358,7 @@ public class VistaValorHoraFragment extends Fragment {
         txt.setLayoutParams(params);
         // agregar al layout
         container.addView(txt);
+        return txt;
     }
 
     private int dpToPx(int dp) {
