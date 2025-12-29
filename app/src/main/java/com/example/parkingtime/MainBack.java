@@ -10,8 +10,11 @@ public class MainBack {
     public static int[] incrementdores = {100,500,1000};
 
     public static String calcularPrecioTotal(int mins, int divisor, int precioHora, int tolerancia){
+        // cantidad de fracciones completas
         int fracciones = calcularFracciones(mins, divisor, tolerancia);
+        //  factor que se multiplica por el precio de hora completa
         float factor =  (float) fracciones / divisor;
+
         Logger.logBack("calcular frc: " + fracciones);
         Logger.logBack("calcular divisor " + divisor);
         Logger.logBack("ftr: " + factor);
@@ -24,11 +27,18 @@ public class MainBack {
         return restaHoras + restaMinutos;
     }
 
+    public static String calcularTiempoCobrado(int minutos, int tolerancia, int divisor){
+        int duracionFraccion = 60 / divisor;
+        int fracciones = calcularFracciones(minutos, divisor, tolerancia);
+        int tiempoCobrado = fracciones * duracionFraccion;
+        return minutoAHora(tiempoCobrado);
+    }
+
     public static String minutoAHora(int minutos){
         String r = "";
         r += (minutos / 60);
         r += ":";
-        r += (minutos % 60);
+        r += String.format("%02d", (minutos % 60));
         return r;
     }
 
@@ -47,6 +57,13 @@ public class MainBack {
             return salida + limite - ingreso;
         }
         return salida - ingreso;
+    }
+
+    public static int horaAnterior(int hora, int limite){
+        if (hora == 0){
+            return limite - 1;
+        }
+        return hora - 1;
     }
 
     private static int calcularFracciones(int minutosTotales, int divisor, int tolerancia){

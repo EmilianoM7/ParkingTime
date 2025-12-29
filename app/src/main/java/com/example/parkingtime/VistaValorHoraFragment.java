@@ -2,6 +2,8 @@ package com.example.parkingtime;
 
 import android.app.AlertDialog;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.icu.util.Calendar;
 import android.os.Bundle;
 import android.text.InputType;
@@ -15,6 +17,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.Spinner;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
@@ -30,19 +34,28 @@ public class VistaValorHoraFragment extends Fragment {
     int grisOscuro = Color.parseColor("#9E9E9E");
     int amarillo = Color.parseColor("#ffd428");
     int grisLetra = Color.parseColor("#666666");
-
-    int verticalBloque = 8;
-    int horizontalBloque = 32;
+    // fuentes
+    int tamanoTitulo = 20;
+    int tamanoSubTitulo = 18;
+    int tamanoDatoGrande = 28;
+    int tamanoDatoChico = 16;
+    // separacion paddings
+    int separacionBotones = 4;
+    int paddingV = 12;
+    int paddingH = 2;
 
     // ENV
     private static int tarifaActual;
     private static int toleranciaActual;
     private static int fraccionActual;
-    private static int horaIngreso;
-    private static int minutoIngreso;
-    private static int horaSalida;
-    private static int minutoSalida;
-    private static TextView txt_tiempo;
+    private static int horaInicio;
+    private static int minutoInicio;
+    private static int horaFin;
+    private static int minutoFin;
+    private static TextView txt_fraccion;
+    private static TextView txt_tolerancia;
+    private static TextView txt_tiempoCobrado;
+    private static TextView txt_tiempoReal;
     private static TextView txt_montoTotal;
 
     public static VistaValorHoraFragment newInstance() {
@@ -70,37 +83,56 @@ public class VistaValorHoraFragment extends Fragment {
 
     private void generarFormulario(LinearLayout container) {
         getDatosIniciales();
+        // presConfig
+        LinearLayout moduloConfig = nuevoModulo();
+        txt_fraccion = nuevoTexto("fraccion?",tamanoSubTitulo,false,true);
+        moduloConfig.addView(txt_fraccion);
+        txt_tolerancia = nuevoTexto("tolerancia?",tamanoSubTitulo,false,true);
+        moduloConfig.addView(txt_tolerancia);
+        container.addView(moduloConfig);
 
-        // config
-        agregarTexto(container, "Fraccion: 1/" + MainBack.fraccionDefault + " hs.", false);
-        agregarTexto(container, "Tolerancia: " + MainBack.toleranciaDefault + " min.", false);
-        agregarSeparador(container);
-        // hora
-        agregarBoton(container,"Hora Ingreso",false);
-        agregarBoton(container,"Hora Salida",true);
-        agregarSeparador(container);
+        // presHora
+        LinearLayout moduloHora = nuevoModulo();
+        agregarSelectorHorarios(moduloHora);
+        txt_tiempoReal = nuevoTexto("treal?",tamanoDatoChico,false,true);
+        moduloHora.addView(txt_tiempoReal);
+        container.addView(moduloHora);
 
-        // tarifa
-        agregarEditorNumero(container,"Tarifa Hora");
-        agregarSeparador(container);
+        // presTarifa
+        LinearLayout moduloTarifa = nuevoModulo();
+        agregarEditorTarifa(moduloTarifa);
+        container.addView(moduloTarifa);
 
-        // calculo
-        txt_tiempo = agregarTexto(container, "tiempo?", true);
-        txt_montoTotal = agregarTexto(container, "monto?", true);
+        // presCalculo
+        LinearLayout moduloCalculo = nuevoModulo();
+        agregarTitulo(moduloCalculo,"Tiempo Cobrado");
+        txt_tiempoCobrado = nuevoTexto("tCobrado?",tamanoDatoGrande,false,true);
+        moduloCalculo.addView(txt_tiempoCobrado);
+        agregarTitulo(moduloCalculo,"Monto Total");
+        txt_montoTotal = nuevoTexto("mTotal?",tamanoDatoGrande,false,true);
+        moduloCalculo.addView(txt_montoTotal);
+        container.addView(moduloCalculo);
+
+        // primer update
         updateFormulario();
     }
 
     private void updateFormulario(){
-        // tiempo
-        int mins = MainBack.calcularMinutosTotales(horaIngreso,minutoIngreso,horaSalida,minutoSalida);
-        txt_tiempo.setText("Tiempo Total: " + MainBack.minutoAHora(mins));
-        // vaor
-        Logger.logMain("OK - " + mins);
-        Logger.logMain("OK - " + fraccionActual);
-        Logger.logMain("OK - " + tarifaActual);
+        //config
+        txt_fraccion.setText("Fraccion: " + (60 / fraccionActual) + " min.");
+        txt_tolerancia.setText("Tolerancia: " + toleranciaActual + " min.");
 
+        // tiempo real
+        int mins = MainBack.calcularMinutosTotales(horaInicio, minutoInicio, horaFin, minutoFin);
+        txt_tiempoReal.setText(MainBack.minutoAHora(mins));
+
+        //tiempoCobrado
+        String tiempoCobrado = MainBack.calcularTiempoCobrado(mins,toleranciaActual,fraccionActual);
+        txt_tiempoCobrado.setText(tiempoCobrado);
+
+        // precioCobrado
         String precioTotal = MainBack.calcularPrecioTotal(mins,fraccionActual,tarifaActual, toleranciaActual);
-        txt_montoTotal.setText("Costo Total: " + precioTotal);
+        txt_montoTotal.setText(enPesos(precioTotal));
         // OK
         Logger.logMain("OK");
     }
@@ -112,78 +144,67 @@ public class VistaValorHoraFragment extends Fragment {
 
         tarifaActual = MainBack.tarifaDefault;
 
-        horaSalida = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-        minutoSalida = Calendar.getInstance().get(Calendar.MINUTE);
-        horaIngreso = horaSalida - 1;
-        minutoIngreso = minutoSalida;
+        horaFin = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        minutoFin = Calendar.getInstance().get(Calendar.MINUTE);
+        horaInicio = MainBack.horaAnterior(horaFin, 24);
+        minutoInicio = minutoFin;
     }
 
-    private void agregarSeparador(LinearLayout container){
-
-        int vertical = 45;
-        int horizontal = 0;
-        //linear
-        // Línea que no llega a los bordes
-        View separador = new View(getContext());
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                2
-        );
-        params.setMargins(horizontal, vertical, horizontal, vertical);  // Márgenes laterales también
-        separador.setLayoutParams(params);
-        separador.setBackgroundColor(Color.BLACK);
-
-        container.addView(separador);
-    }
-
-    private void agregarBoton(LinearLayout container, String nombre, boolean actual){
+    private void agregarSelectorHorarios(LinearLayout container){
         // lavel
-        agregarTexto(container,nombre + ":",true);
-        //linear
-        LinearLayout liearHora = new LinearLayout(requireContext());
-        liearHora.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+        agregarTitulo(container,"Seleccoinar Horarios");
+
+        //table
+        TableLayout tableLayout = new TableLayout(requireContext());
+        tableLayout.setLayoutParams(new TableLayout.LayoutParams(
+                TableLayout.LayoutParams.MATCH_PARENT,
+                TableLayout.LayoutParams.WRAP_CONTENT
         ));
-        liearHora.setOrientation(LinearLayout.HORIZONTAL);
-        liearHora.setGravity(Gravity.CENTER_VERTICAL);
-        liearHora.setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12));
-        liearHora.setBackgroundColor(grisMedio);
-        liearHora.setClickable(true);
-        liearHora.setFocusable(true);
+        tableLayout.setStretchAllColumns(true);  // Importante para distribución igual
 
-        // TextView clave
-        TextView tvHoraActual = new TextView(requireContext());
-        LinearLayout.LayoutParams claveParams = new LinearLayout.LayoutParams(
-                0,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                1
-        );
-        tvHoraActual.setLayoutParams(claveParams);
-        tvHoraActual.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-        tvHoraActual.setTextSize(24);
-        // setFechaActual
-        String horaActual;
-        if (actual){
-            horaActual = horaSalida + ":" + minutoSalida;
+        // linea titulos
+        TableRow rowTitulos = new TableRow(requireContext());
+        for (int i = 0; i < 2; i++) {
+            String titulo = (i == 0) ? "Inicial" : "Final";
+            TextView textView = nuevoTexto(titulo,tamanoSubTitulo,true,true);
+            rowTitulos.addView(textView);
         }
-        else {
-            horaActual = horaIngreso + ":" + minutoIngreso;
+        // linea Botones
+        TableRow rowBotones = new TableRow(requireContext());
+
+        for (int i = 0; i < 2; i++) {
+
+            // setFechaActual
+            boolean actual = i != 0;
+            String horaActual;
+            String tituloScroller;
+            if (actual){
+                tituloScroller = "Hora de Fin";
+                horaActual = formatHora(horaFin, minutoFin);
+            }
+            else {
+                tituloScroller = "Hora de Inicio";
+                horaActual = formatHora(horaInicio, minutoInicio);
+            }
+
+            // crear boton
+            Button btnHora = nuevoBoton(horaActual, tamanoDatoGrande, azul,false);
+
+            // setear accion Boton
+            btnHora.setOnClickListener(v -> mostrarDialogHoraScrolleable(tituloScroller, actual, btnHora));
+
+            //añadir al RAW
+            rowBotones.addView(btnHora);
+            agregarmargenboton(btnHora,separacionBotones);
         }
-        tvHoraActual.setText(horaActual);
 
-        // añadir al linear
-        liearHora.addView(tvHoraActual);
+        tableLayout.addView(rowTitulos);
+        tableLayout.addView(rowBotones);
 
-        // listener
-        liearHora.setOnClickListener(v -> mostrarDialogHoraScrolleable(nombre, actual, tvHoraActual));
-
-        //añadir al container
-        container.addView(liearHora);
-
+        container.addView(tableLayout);
     }
 
-    private void mostrarDialogHoraScrolleable(String nombre, boolean actual, TextView tvHora) {
+    private void mostrarDialogHoraScrolleable(String nombre, boolean actual, Button btnHora) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         builder.setTitle(nombre);
 
@@ -210,12 +231,12 @@ public class VistaValorHoraFragment extends Fragment {
         pickerMinuto.setMinValue(0);
         pickerMinuto.setMaxValue(59);
         if (actual){
-            pickerHora.setValue(horaSalida);
-            pickerMinuto.setValue(minutoSalida);
+            pickerHora.setValue(horaFin);
+            pickerMinuto.setValue(minutoFin);
         }
         else {
-            pickerHora.setValue(horaIngreso);
-            pickerMinuto.setValue(minutoIngreso);
+            pickerHora.setValue(horaInicio);
+            pickerMinuto.setValue(minutoInicio);
         }
         pickerMinuto.setFormatter(i -> String.format("%02d", i));
 
@@ -229,16 +250,16 @@ public class VistaValorHoraFragment extends Fragment {
             int minuto = pickerMinuto.getValue();
             // Usar la hora seleccionada
             if (actual){
-                horaSalida = hora;
-                minutoSalida = minuto;
-                Logger.logMain("salida: " + horaSalida  + ":" + minutoSalida);
+                horaFin = hora;
+                minutoFin = minuto;
+                Logger.logMain("salida: " + formatHora(horaFin, minutoFin));
             }
             else {
-                horaIngreso = hora;
-                minutoIngreso = minuto;
-                Logger.logMain("ingreso: " + horaIngreso  + ":" + minutoIngreso);
+                horaInicio = hora;
+                minutoInicio = minuto;
+                Logger.logMain("ingreso: " + formatHora(horaInicio, minutoInicio));
             }
-            tvHora.setText(hora + ":" + minuto);
+            btnHora.setText(formatHora(hora,minuto));
             updateFormulario();
         });
         builder.setNegativeButton("Cancelar", null);
@@ -248,7 +269,7 @@ public class VistaValorHoraFragment extends Fragment {
 
     private void agregarSpiner(LinearLayout container, String nombre){
         // lavel
-        agregarTexto(container,nombre + ":",true);
+        agregarTitulo(container,nombre);
         // spinner
         Spinner spinner = new Spinner(getContext());
         spinner.setId(View.generateViewId());
@@ -270,9 +291,9 @@ public class VistaValorHoraFragment extends Fragment {
         container.addView(spinner);
     }
 
-    private void agregarEditorNumero(LinearLayout container, String nombre){
+    private void agregarEditorTarifa(LinearLayout container){
         // lavel
-        agregarTexto(container,nombre + ":",true);
+        agregarTitulo(container,"Tarifa Hora");
         // editor
         EditText editTextNumber = new EditText(getContext());
         editTextNumber.setId(View.generateViewId());
@@ -280,89 +301,158 @@ public class VistaValorHoraFragment extends Fragment {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
+        editTextNumber.setBackgroundColor(grisClaro);
         editTextNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
-        editTextNumber.setText("" + tarifaActual);
-
+        editTextNumber.setText(enPesos("" + tarifaActual));
+        editTextNumber.setTextSize(tamanoDatoGrande);
+        editTextNumber.setGravity(Gravity.CENTER);
         // agregar editor
         container.addView(editTextNumber);
         // incrementadores
-        agregarIncrementadores(container,editTextNumber, true);
-        agregarIncrementadores(container,editTextNumber, false);
+        agregarIncrementadores(container,editTextNumber);
     }
 
-    private void agregarIncrementadores(LinearLayout container, EditText numerico, boolean incrementar)   {
+    private void agregarIncrementadores(LinearLayout container, EditText numerico)   {
 
-        LinearLayout lineaIncrementador = new LinearLayout(requireContext());
-        lineaIncrementador.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+        TableLayout tableLayout = new TableLayout(requireContext());
+        tableLayout.setLayoutParams(new TableLayout.LayoutParams(
+                TableLayout.LayoutParams.MATCH_PARENT,
+                TableLayout.LayoutParams.WRAP_CONTENT
         ));
-        lineaIncrementador.setOrientation(LinearLayout.HORIZONTAL);
+        tableLayout.setStretchAllColumns(true);  // Importante para distribución igual
 
         int [] inc = MainBack.incrementdores;
-        for (int j = 0; j < inc.length; j++) {
+        for (int i = 0; i < 2; i++) {
+            TableRow rowBotones = new TableRow(requireContext());
 
-            // crear boton
-            Button btnIncrementador = new Button(requireContext());
-            btnIncrementador.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            ));
-            btnIncrementador.setTextSize(14);
+            for (int j = 0; j < inc.length; j++) {
 
-            // discriminar valores
-            String signo = "";
-            int multiplicadorSigno;
-            int colorBoton = azul;
-            if (incrementar){
-                signo = "+";
-                multiplicadorSigno = 1;
-            } else {
-                multiplicadorSigno = -1;
-                colorBoton = rosa;
+                // armar valor
+                String signo;
+                int multiplicadorSigno;
+                int colorBoton;
+                if (i == 0){
+                    signo = "+";
+                    multiplicadorSigno = 1;
+                    colorBoton = azul;
+                } else {
+                    signo = "-";
+                    multiplicadorSigno = -1;
+                    colorBoton = rosa;
+                }
+
+                // crear boton
+                String valorVoton = signo + inc[j];
+                Button btnIncrementador = nuevoBoton(valorVoton,tamanoSubTitulo,colorBoton,true);
+
+                // setear accion Boton
+                int tarifaBoton = inc[j] * multiplicadorSigno;
+                btnIncrementador.setOnClickListener(v -> {
+                    tarifaActual =  MainBack.incrementar(tarifaActual, tarifaBoton);
+                    Logger.logMain("Tarifa: " + tarifaActual);
+                    numerico.setText(enPesos("" + tarifaActual));
+                    updateFormulario();
+                });
+
+                // añadir cada boton
+                rowBotones.addView(btnIncrementador);
+                agregarmargenboton(btnIncrementador,separacionBotones);
             }
 
-            int tarifaBoton = inc[j] * multiplicadorSigno;
-
-            // setear valores
-            btnIncrementador.setOnClickListener(v -> {
-                tarifaActual =  MainBack.incrementar(tarifaActual, tarifaBoton);
-                Logger.logMain("Tarifa: " + tarifaActual);
-                numerico.setText("" + tarifaActual);
-                updateFormulario();
-            });
-            btnIncrementador.setBackgroundColor(colorBoton);
-            btnIncrementador.setText(signo + tarifaBoton);
-
-            // añadir cada boton
-            lineaIncrementador.addView(btnIncrementador);
+            tableLayout.addView(rowBotones);
         }
-        // añadir la linea
-        container.addView(lineaIncrementador);
-
+        container.addView(tableLayout);
     }
 
-    private TextView agregarTexto(LinearLayout container, String texto, boolean bold) {
-        TextView txt = new TextView(getContext());
-        txt.setText(texto);
-        txt.setTextSize(16);
-        txt.setTextColor(Color.parseColor("#000000"));
-        if (bold) {
-            txt.setTypeface(null, android.graphics.Typeface.BOLD);
-        }
-        txt.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) txt.getLayoutParams();
-        params.setMargins(horizontalBloque, verticalBloque, horizontalBloque, verticalBloque);
-        txt.setLayoutParams(params);
+    private void agregarTitulo(LinearLayout container, String texto) {
+
+        TextView txt = nuevoTexto(
+                texto + ":",
+                tamanoTitulo,
+                false,
+                false);
+        txt.setBackgroundColor(azul);
+        txt.setPadding(12,4,12,4);
         // agregar al layout
         container.addView(txt);
+    }
+
+    LinearLayout nuevoModulo(){
+        // modulo
+        LinearLayout modulo = new LinearLayout(requireContext());
+        modulo.setOrientation(LinearLayout.VERTICAL);
+        modulo.setBackgroundColor(grisMedio);
+        // borde y fondo
+        GradientDrawable border = new GradientDrawable();
+        border.setColor(grisClaro); // Color de fondo
+        border.setStroke(1, Color.BLACK); // Ancho y color del borde
+        border.setCornerRadius(10); // Radio de esquinas (opcional)
+        modulo.setBackground(border);
+        // padding y separacion
+        modulo.setPadding(paddingH, paddingV, paddingH, paddingV);
+        // separacion
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0,0,0,16);
+        modulo.setLayoutParams(params);
+        //
+        return modulo;
+    }
+
+    TextView nuevoTexto(String texto, int tamano, boolean bold, boolean centrado){
+        TextView txt = new TextView(requireContext());
+
+        // atrib
+        txt.setText(texto);
+        txt.setTextSize(tamano == 0 ? 16 : tamano);
+        txt.setTextColor(Color.BLACK);
+        if (bold) {
+            txt.setTypeface(null, Typeface.BOLD);
+        }
+        if (centrado){
+            txt.setGravity(Gravity.CENTER);
+        }
+        txt.setPadding(12,4,12,4);
+
+        //return
         return txt;
+    }
+
+    Button nuevoBoton (String text, int tamanoTexto, int colorFondo,  boolean bold){
+        Button btn = new Button(requireContext());
+        btn.setTextSize(tamanoTexto);
+        btn.setText(text);
+        if (bold){btn.setTypeface(null, Typeface.BOLD);}
+        else {btn.setTypeface(null, Typeface.NORMAL);}
+
+        // borde y fondo
+        GradientDrawable border = new GradientDrawable();
+        border.setColor(colorFondo); // Color de fondo
+        //border.setStroke(1, Color.BLACK); // Ancho y color del borde
+        border.setCornerRadius(20); // Radio de esquinas (opcional)
+        btn.setBackground(border);
+
+        return btn;
     }
 
     private int dpToPx(int dp) {
         float density = getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
+    }
+
+    private void agregarmargenboton(Button btn, int margen){
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) btn.getLayoutParams();
+        params.setMargins(margen,margen,margen,margen);
+        btn.setLayoutParams(params);
+    }
+
+    String enPesos(String pesos){
+        return "$ " + pesos;
+    }
+
+    String formatHora(int hora, int minuto){
+        return String.format("%02d", hora) + ":" + String.format("%02d", minuto);
     }
 }
