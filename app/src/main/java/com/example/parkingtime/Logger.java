@@ -10,4 +10,7 @@ public class Logger {
     public static void logBack(String msj ) {
         Log.d("EE","Back: " + msj);
     }
+    public static void logModulo(String msj ) {
+        Log.d("EE","Modulo: " + msj);
+    }
 }

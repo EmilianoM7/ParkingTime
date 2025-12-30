@@ -6,8 +6,8 @@ public class MainBack {
     public static int fraccionDefault = 2;
     public static int toleranciaDefault = 5;
     public static int tarifaDefault = 3000;
-    public static boolean primerHoraCompletaDefault = true;
     public static int[] incrementdores = {100,500,1000};
+    public static int[] fracciones = {60,30,15,10,5};
 
     public static String calcularPrecioTotal(int mins, int divisor, int precioHora, int tolerancia){
         // cantidad de fracciones completas
@@ -40,6 +40,13 @@ public class MainBack {
         r += ":";
         r += String.format("%02d", (minutos % 60));
         return r;
+    }
+    public static String enPesos(String pesos){
+        return "$ " + pesos;
+    }
+
+    public static String formatHora(int hora, int minuto){
+        return String.format("%02d", hora) + ":" + String.format("%02d", minuto);
     }
 
     public static int incrementar(int valor, int sumando){

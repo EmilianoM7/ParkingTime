@@ -14,15 +14,12 @@ public class VistaMenuFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_vista_menu, container, false);
 
-
         Button btnValorHora = view.findViewById(R.id.btnValorHora);
         Button btnTest = view.findViewById(R.id.btnTest);
         Button btnSalir = view.findViewById(R.id.btnSalir);
 
 
         btnValorHora.setOnClickListener(v -> {
-
-
             ((MainActivity) getActivity()).showFragmentWithBackStack(
                     VistaValorHoraFragment.newInstance());
         });
