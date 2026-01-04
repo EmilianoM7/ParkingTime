@@ -1,8 +1,6 @@
 package com.example.parkingtime;
 
 import android.app.AlertDialog;
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
 import android.icu.util.Calendar;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -29,10 +27,6 @@ public class VistaTestFragment extends Fragment {
         View view = inflater.inflate(R.layout.frafment_test, container, false);
 
         LinearLayout containerTest = view.findViewById(R.id.containerTest);
-
-        Button btnFecha = new Button(getContext());
-        btnFecha.setText("Seleccionar Fecha");
-        btnFecha.setOnClickListener(v -> mostrarDatePicker(btnFecha));
 
         Button btnHora = new Button(getContext());
         btnHora.setText("Seleccionar Hora");
@@ -90,39 +84,7 @@ public class VistaTestFragment extends Fragment {
         builder.create().show();
     }
 
-    private void mostrarDatePicker(Button btnFecha) {
-        Calendar calendar = Calendar.getInstance();
-        int año = calendar.get(Calendar.YEAR);
-        int mes = calendar.get(Calendar.MONTH);
-        int dia = calendar.get(Calendar.DAY_OF_MONTH);
 
-        DatePickerDialog datePickerDialog = new DatePickerDialog(
-                getContext(),
-                (view, year, month, dayOfMonth) -> {
-                    // Fecha seleccionada
-                    String fecha = dayOfMonth + "/" + (month + 1) + "/" + year;
-                    btnFecha.setText(fecha);
-                },
-                año, mes, dia
-        );
-        datePickerDialog.show();
-    }
 
-    private void mostrarTimePicker(Button btnHora) {
-        Calendar calendar = Calendar.getInstance();
-        int hora = calendar.get(Calendar.HOUR_OF_DAY);
-        int minuto = calendar.get(Calendar.MINUTE);
-
-        TimePickerDialog timePickerDialog = new TimePickerDialog(
-                getContext(),
-                (view, hourOfDay, minute) -> {
-                    // Hora seleccionada
-                    String tiempo = hourOfDay + ":" + minute;
-                    btnHora.setText(tiempo);
-                },
-                hora, minuto, true // true = formato 24 horas
-        );
-        timePickerDialog.show();
-    }
 
 }

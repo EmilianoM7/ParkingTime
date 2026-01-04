@@ -23,15 +23,6 @@
             android:textColor="@color/white"
             android:textSize="20sp"
             android:textStyle="bold"/>
-
-        <Button
-            android:id="@+id/btnMenu"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:text="☰"
-            android:textColor="@color/white"
-            android:textSize="24sp"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
     </LinearLayout>
 
     <!-- Panel Menu -->
@@ -43,6 +34,7 @@
         >
 
         <LinearLayout
+            android:id="@+id/containerMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
@@ -52,13 +44,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Valor Hora"
-                android:textSize="16sp"/>
-
-            <Button
-                android:id="@+id/btnTest"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Test"
                 android:textSize="16sp"/>
 
             <Button

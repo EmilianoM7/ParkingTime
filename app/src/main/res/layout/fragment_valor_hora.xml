@@ -33,15 +33,6 @@
             android:textSize="20sp"
             android:textStyle="bold"
             android:paddingLeft="8dp"/>
-
-        <Button
-            android:id="@+id/btnMenu"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:text="☰"
-            android:textColor="@color/white"
-            android:textSize="24sp"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
     </LinearLayout>
 
     <!-- Panel Info -->

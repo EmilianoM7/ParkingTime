@@ -1,13 +1,10 @@
 package com.example.parkingtime;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.icu.util.Calendar;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
@@ -27,8 +24,6 @@ import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
-import java.lang.reflect.Field;
-
 public class VistaValorHoraFragment extends Fragment {
 
     int naranja = Color.parseColor("#ffb66c");
@@ -47,13 +42,13 @@ public class VistaValorHoraFragment extends Fragment {
     int tamanoDatoChico = 16;
     // separacion paddings
     int separacionBotones = 4;
-    int paddingV = 12;
+    int paddingV = 8;
     int paddingH = 2;
 
     // ENV
-    private static int tarifaActual;
-    private static int toleranciaActual;
     private static int fraccionActual;
+    private static int toleranciaActual;
+    private static int tarifaActual;
     private static int horaInicio;
     private static int minutoInicio;
     private static int horaFin;
@@ -63,6 +58,7 @@ public class VistaValorHoraFragment extends Fragment {
     private static TextView txt_tiempoCobrado;
     private static TextView txt_tiempoReal;
     private static TextView txt_montoTotal;
+    private static PreferenceManager preferenceManager;
 
     public static VistaValorHoraFragment newInstance() {
         VistaValorHoraFragment fragment = new VistaValorHoraFragment();
@@ -81,6 +77,9 @@ public class VistaValorHoraFragment extends Fragment {
 
         // layout ppal
         LinearLayout containerFormulario = view.findViewById(R.id.containerInfo);
+
+        // preferenceManager
+        preferenceManager = PreferenceManager.getInstance(requireContext());
 
         // generar
         generarFormulario(containerFormulario);
@@ -106,13 +105,14 @@ public class VistaValorHoraFragment extends Fragment {
 
         // primer update
         updateFormulario();
+        status("generarFormulario");
     }
 
     private void updateFormulario(){
         // actualizar los los datos calculados
 
         //config
-        txt_fraccion.setText("Fraccion: " + (60 / fraccionActual) + " min");
+        txt_fraccion.setText("Fraccion: " + fraccionActual + " min");
         txt_tolerancia.setText("Tolerancia: " + toleranciaActual + " min");
 
         // tiempo real
@@ -126,21 +126,18 @@ public class VistaValorHoraFragment extends Fragment {
         // precioCobrado
         String precioTotal = MainBack.calcularPrecioTotal(mins,fraccionActual,tarifaActual, toleranciaActual);
         txt_montoTotal.setText(MainBack.enPesos(precioTotal));
-        // OK
-        Logger.logMain("OK");
     }
 
     private void getDatosIniciales(){
-        //TODO esto debe poder configurarse
-        fraccionActual = MainBack.fraccionDefault;
-        toleranciaActual = MainBack.toleranciaDefault;
-
-        tarifaActual = MainBack.tarifaDefault;
+        fraccionActual = preferenceManager.getFraccion();
+        toleranciaActual = preferenceManager.getTolerancia();
+        tarifaActual = preferenceManager.getTarifa();
 
         horaFin = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         minutoFin = Calendar.getInstance().get(Calendar.MINUTE);
         horaInicio = MainBack.horaAnterior(horaFin, 24);
         minutoInicio = minutoFin;
+        status("getDatosIniciales");
     }
 
     private void agregarPresConfig(LinearLayout container){
@@ -153,7 +150,6 @@ public class VistaValorHoraFragment extends Fragment {
         moduloConfig.setOnClickListener(v -> mostrarDialogoConfig());
         // modulo -> container
         container.addView(moduloConfig);
-        Logger.logModulo("agregarPresConfig");
     }
 
     private void agregarPresHorarios(LinearLayout container){
@@ -188,7 +184,7 @@ public class VistaValorHoraFragment extends Fragment {
             TextView tituloHorario = nuevoTexto(titulo,tamanoSubTitulo,true,true);
             Button btnHora = nuevoBoton(horaActual, tamanoDatoGrande, azul,false);
             // setear accion Boton
-            btnHora.setOnClickListener(v -> mostrarDialogHorario("Hora " + titulo, actual, btnHora));
+            btnHora.setOnClickListener(v -> mostrarDialogoHorario("Hora " + titulo, actual, btnHora));
             // añadir titulo y boton al RAW correspondiente
             rowTitulos.addView(tituloHorario);
             rowBotones.addView(btnHora);
@@ -206,17 +202,13 @@ public class VistaValorHoraFragment extends Fragment {
         // modulo -> container
         container.addView(moduloHora);
         // log
-        Logger.logModulo("agregarPresHorarios");
     }
 
-    private void mostrarDialogHorario(String nombre, boolean actual, Button btnHora) {
+    private void mostrarDialogoHorario(String nombre, boolean actual, Button btnHora) {
         AlertDialog dialog1 = nuevoDialogo(nombre);
 
         // Layout para los NumberPickers
-        LinearLayout layout = new LinearLayout(getContext());
-        layout.setOrientation(LinearLayout.HORIZONTAL);
-        layout.setPadding(50, 40, 50, 40);
-        layout.setGravity(Gravity.CENTER);
+        LinearLayout layoutDialogoHorario = nuevoLinar(false,0,8,4);
 
         // NumberPickers y separador
         final NumberPicker pickerHora = nuevoNumberPicker(0,23,true);
@@ -233,60 +225,75 @@ public class VistaValorHoraFragment extends Fragment {
             pickerMinuto.setValue(minutoInicio);
         }
 
-        layout.addView(pickerHora);
-        layout.addView(separador);
-        layout.addView(pickerMinuto);
+        layoutDialogoHorario.addView(pickerHora);
+        layoutDialogoHorario.addView(separador);
+        layoutDialogoHorario.addView(pickerMinuto);
 
-        dialog1.setView(layout);
+        dialog1.setView(layoutDialogoHorario);
         dialog1.setButton(AlertDialog.BUTTON_POSITIVE,"Aceptar", (dialog, which) -> {
-            int hora = pickerHora.getValue();
-            int minuto = pickerMinuto.getValue();
-            // Usar la hora seleccionada
-            if (actual){
-                horaFin = hora;
-                minutoFin = minuto;
-                Logger.logMain("salida: " + MainBack.formatHora(horaFin, minutoFin));
-            }
-            else {
-                horaInicio = hora;
-                minutoInicio = minuto;
-                Logger.logMain("ingreso: " + MainBack.formatHora(horaInicio, minutoInicio));
-            }
-            btnHora.setText(MainBack.formatHora(hora,minuto));
-            updateFormulario();
+            accionAceptarHorario(pickerHora,pickerMinuto,actual,btnHora);
         });
         dialog1.setButton(AlertDialog.BUTTON_NEGATIVE,"Cancelar", (dialog, which) -> {});
 
         dialog1.show();
     }
 
+    private void accionAceptarHorario(NumberPicker pickerHora,NumberPicker pickerMinuto, boolean actual, Button btnHora){
+        int hora = pickerHora.getValue();
+        int minuto = pickerMinuto.getValue();
+        // Usar la hora seleccionada
+        if (actual){
+            horaFin = hora;
+            minutoFin = minuto;
+            Logger.logMain("salida: " + MainBack.formatHora(horaFin, minutoFin));
+        }
+        else {
+            horaInicio = hora;
+            minutoInicio = minuto;
+            Logger.logMain("ingreso: " + MainBack.formatHora(horaInicio, minutoInicio));
+        }
+        btnHora.setText(MainBack.formatHora(hora,minuto));
+        updateFormulario();
+        status("accionAceptarHorario");
+    }
+
     private void mostrarDialogoConfig() {
         AlertDialog dialog1 = nuevoDialogo("Config");
 
         // Layout para los NumberPickers
-        LinearLayout layoutDialogo = new LinearLayout(getContext());
-        layoutDialogo.setOrientation(LinearLayout.VERTICAL);
-        layoutDialogo.setPadding(50, 40, 50, 40);
-        layoutDialogo.setGravity(Gravity.CENTER);
+        LinearLayout layoutDialogo = nuevoLinar(true,0,8,4);
+
         // config fraccion
         agregarTitulo(layoutDialogo, "Fraccion");
-        String[] fracciones = {"60","30","15","10","5"};
-        Spinner spnFraccion = nuevoSpiner(fracciones);
+        Spinner spnFraccion = nuevoSpiner(MainBack.fracciones);
+        spnFraccion.setSelection(MainBack.getIndice(MainBack.fracciones,fraccionActual));
         layoutDialogo.addView(spnFraccion);
         // config tolerancia
         agregarTitulo(layoutDialogo, "Tolerancia");
-        String[] tolerancias = {"5","10","15","20","25"};
-        Spinner spnTolerancia = nuevoSpiner(tolerancias);
+        Spinner spnTolerancia = nuevoSpiner(MainBack.tolerancias);
+        spnTolerancia.setSelection(MainBack.getIndice(MainBack.tolerancias,toleranciaActual));
         layoutDialogo.addView(spnTolerancia);
         // setear dialog1
         dialog1.setView(layoutDialogo);
 
         dialog1.setButton(AlertDialog.BUTTON_POSITIVE, "Aceptar", (dialog, which) -> {
-            Logger.logMain("dialogoConfig.btnAceptar");
+            accionAceptarConfig(spnFraccion,spnTolerancia);
         });
         dialog1.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancelar", (dialog, which) -> {});
 
         dialog1.show();
+    }
+
+    private void accionAceptarConfig(Spinner spnFraccion, Spinner spnTolerancia){
+        // actualizar variables ENV
+        fraccionActual = Integer.parseInt(spnFraccion.getSelectedItem().toString());
+        toleranciaActual = Integer.parseInt(spnTolerancia.getSelectedItem().toString());
+        // actualizar preferenceManager - persistencia
+        preferenceManager.setFraccion(fraccionActual);
+        preferenceManager.setTolerancia(toleranciaActual);
+        //update
+        updateFormulario();
+        status("accionAceptarConfig");
     }
 
     private void agregarPresTarifa(LinearLayout container){
@@ -311,8 +318,6 @@ public class VistaValorHoraFragment extends Fragment {
         agregarIncrementadores(moduloTarifa,editTextNumber);
         // modulo -> container
         container.addView(moduloTarifa);
-        // log
-        Logger.logModulo("agregarPresTarifa");
     }
 
     private void agregarPresCalculo(LinearLayout container){
@@ -324,8 +329,6 @@ public class VistaValorHoraFragment extends Fragment {
         txt_montoTotal = nuevoTexto("mTotal?",tamanoDatoGrande,false,true);
         moduloCalculo.addView(txt_montoTotal);
         container.addView(moduloCalculo);
-        // log
-        Logger.logModulo("agregarPresCalculo");
     }
 
     private void agregarIncrementadores(LinearLayout container, EditText numerico)   {
@@ -377,15 +380,14 @@ public class VistaValorHoraFragment extends Fragment {
 
     private void accionIncrementador(int valorBoton, EditText editable){
         tarifaActual =  MainBack.incrementar(tarifaActual, valorBoton);
-        Logger.logMain("Tarifa: " + tarifaActual);
         editable.setText(MainBack.enPesos("" + tarifaActual));
         updateFormulario();
+        status("accionIncrementador");
     }
 
     private void agregarTitulo(LinearLayout container, String texto) {
         TextView txt = nuevoTexto(texto + ":",tamanoTitulo,false,false);
         txt.setBackgroundColor(azul);
-        txt.setPadding(12,4,12,4);
         // agregar al layout
         container.addView(txt);
     }
@@ -406,19 +408,15 @@ public class VistaValorHoraFragment extends Fragment {
 
     LinearLayout nuevoModulo(){
         // modulo
-        LinearLayout modulo = new LinearLayout(requireContext());
-        modulo.setOrientation(LinearLayout.VERTICAL);
-        modulo.setBackgroundColor(grisMedio);
+        LinearLayout modulo = nuevoLinar(true,0,paddingH,paddingV);
         // borde y fondo
         modulo.setBackground(nuevoFondo(grisMedio,1,Color.BLACK,10));
-        // padding y separacion
-        modulo.setPadding(paddingH, paddingV, paddingH, paddingV);
         // separacion
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        params.setMargins(0,0,0,16);
+        params.setMargins(0,0,0,8);
         modulo.setLayoutParams(params);
         //
         return modulo;
@@ -466,7 +464,7 @@ public class VistaValorHoraFragment extends Fragment {
         return picker;
     }
 
-    private Spinner nuevoSpiner(String[] valores){
+    private Spinner nuevoSpiner(int[] valores){
 
         // spinner
         Spinner spinner = new Spinner(getContext());
@@ -478,8 +476,12 @@ public class VistaValorHoraFragment extends Fragment {
         spinner.setLayoutParams(spinnerParams);
         spinner.setMinimumHeight(144);
         // opciones
+        String[] valoresString = new String[valores.length];
+        for (int i = 0; i < valores.length; i++) {
+            valoresString[i] = String.valueOf(valores[i]);
+        }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(getContext(),
-                android.R.layout.simple_spinner_item, valores);
+                android.R.layout.simple_spinner_item, valoresString);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
         spinner.setSelection(0);
@@ -495,6 +497,20 @@ public class VistaValorHoraFragment extends Fragment {
         return drawable;
     }
 
+    LinearLayout nuevoLinar (boolean vertical, int colorFondo, int paddingH, int paddingV) {
+        LinearLayout linear = new LinearLayout(requireContext());
+
+        if (vertical) {linear.setOrientation(LinearLayout.VERTICAL);}
+        else {linear.setOrientation(LinearLayout.HORIZONTAL);}
+
+        if (colorFondo != 0){
+            linear.setBackgroundColor(colorFondo);
+        }
+        linear.setGravity(Gravity.CENTER);
+        linear.setPadding(dpToPx(paddingH), dpToPx(paddingV), dpToPx(paddingH), dpToPx(paddingV));
+        return linear;
+    }
+
     private int dpToPx(int dp) {
         float density = getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
@@ -505,4 +521,13 @@ public class VistaValorHoraFragment extends Fragment {
         params.setMargins(margen,margen,margen,margen);
         btn.setLayoutParams(params);
     }
+
+    void status(String nonmbre){
+        /*
+        Logger.logMain("status." + nonmbre);
+        Logger.logMain("| frc | tol | tar |");
+        Logger.logMain("| " + fraccionActual + " | " + toleranciaActual + " | " + tarifaActual + " |");
+        */
+    }
+
 }

@@ -1,22 +1,30 @@
 package com.example.parkingtime;
 
-
 public class MainBack {
 
-    public static int fraccionDefault = 2;
-    public static int toleranciaDefault = 5;
-    public static int tarifaDefault = 3000;
     public static int[] incrementdores = {100,500,1000};
-    public static int[] fracciones = {60,30,15,10,5};
+    public static int[] fracciones = {5,10,15,30,60};
+    public static int[] tolerancias = {5,10,15,20,25};
 
-    public static String calcularPrecioTotal(int mins, int divisor, int precioHora, int tolerancia){
+    // calculos
+
+    public static int getIndice(int[] vector, int elemento){
+        for (int i = 0; i < vector.length; i++) {
+            if (vector[i] == elemento){
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    public static String calcularPrecioTotal(int mins, int fraccion, int precioHora, int tolerancia){
         // cantidad de fracciones completas
-        int fracciones = calcularFracciones(mins, divisor, tolerancia);
+        int fracciones = calcularFracciones(mins, fraccion, tolerancia);
         //  factor que se multiplica por el precio de hora completa
-        float factor =  (float) fracciones / divisor;
+        float factor =  (float) fracciones * fraccion / 60;
 
-        Logger.logBack("calcular frc: " + fracciones);
-        Logger.logBack("calcular divisor " + divisor);
+        Logger.logBack("calcular frcs: " + fracciones);
+        Logger.logBack("calcular fraccion " + fraccion);
         Logger.logBack("ftr: " + factor);
         return  "" + (factor * precioHora);
     }
@@ -27,10 +35,9 @@ public class MainBack {
         return restaHoras + restaMinutos;
     }
 
-    public static String calcularTiempoCobrado(int minutos, int tolerancia, int divisor){
-        int duracionFraccion = 60 / divisor;
-        int fracciones = calcularFracciones(minutos, divisor, tolerancia);
-        int tiempoCobrado = fracciones * duracionFraccion;
+    public static String calcularTiempoCobrado(int minutos, int tolerancia, int fraccion){
+        int fracciones = calcularFracciones(minutos, fraccion, tolerancia);
+        int tiempoCobrado = fracciones * fraccion;
         return minutoAHora(tiempoCobrado);
     }
 
@@ -41,6 +48,7 @@ public class MainBack {
         r += String.format("%02d", (minutos % 60));
         return r;
     }
+
     public static String enPesos(String pesos){
         return "$ " + pesos;
     }
@@ -59,6 +67,8 @@ public class MainBack {
         return 0;
     }
 
+    // internos
+
     private static int restarHorario (int ingreso, int salida, int limite){
         if (ingreso > salida){
             return salida + limite - ingreso;
@@ -73,10 +83,9 @@ public class MainBack {
         return hora - 1;
     }
 
-    private static int calcularFracciones(int minutosTotales, int divisor, int tolerancia){
-        int unidadFraccion = 60 / divisor;
-        int fraccionesCompletas = minutosTotales / unidadFraccion;
-        int resto = minutosTotales % unidadFraccion;
+    private static int calcularFracciones(int minutosTotales, int fraccion, int tolerancia){
+        int fraccionesCompletas = minutosTotales / fraccion;
+        int resto = minutosTotales % fraccion;
         if (resto >= tolerancia){
             fraccionesCompletas++;
         }
